@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using UnityEditor;
@@ -12,7 +12,7 @@ namespace Godot
         [MenuItem("Godot/Export to Godot 3.1")]
         static void ExportToGodot31()
         {
-            var e = new Exporter("D:/PROJETS/INFO/UNITY/LD32_EatAndCopulate/GodotProject");
+            var e = new Exporter("Godot/GodotProject");
             e.Export();
         }
 
@@ -134,7 +134,7 @@ namespace Godot
 
             Node rootNode = null;
             Rigidbody2D promoteRigidBody2D = null;
-            float rescale2d = 1f;
+            float rescale2d = 100f;
             int scriptCount = 0;
             Script script = null;
             Dictionary<string, object> scriptVariables = null;
@@ -246,16 +246,21 @@ namespace Godot
                     }
                 }
 
-                node2d.position = go.transform.position * rescale2d;
+                node2d.position = go.transform.localPosition * rescale2d;
                 node2d.position.y *= -1f;
                 // TODO Invert Y properly
                 // TODO Select pivot
                 //node2d.position.y = Screen.height - node2d.position.y;
 
                 node2d.scale = go.transform.localScale;
+                SpriteRenderer goSprite = go.GetComponent<SpriteRenderer>();
+                if(goSprite)
+                {
+                    if(goSprite.flipX) node2d.scale.x *= -1f;
+                    if(goSprite.flipY) node2d.scale.y *= -1f;
+                }
 
-                // TODO Is eulerAngles in degrees or radians??
-                node2d.rotation = go.transform.rotation.eulerAngles.z;
+                node2d.rotation = -go.transform.localRotation.eulerAngles.z * Mathf.Deg2Rad;
 
                 node2d.visible = go.activeSelf;
 
