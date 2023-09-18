@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text;
 
@@ -8,6 +8,10 @@ namespace Godot
     {
         public static StreamWriter CreateStreamWriter(string path)
         {
+
+            // Create missing directories
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+
             // Godot expects files to be UTF-8, without BOM, and Unix line endings
             StreamWriter sw = new StreamWriter(path, false, new UTF8Encoding(false));
             sw.NewLine = "\n";
