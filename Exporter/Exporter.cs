@@ -139,6 +139,7 @@ namespace Godot
             Script script = null;
             Dictionary<string, object> scriptVariables = null;
 
+
             foreach(var cmp in components)
             {
                 Node node = null;
@@ -155,6 +156,8 @@ namespace Godot
                     {
                         dst.texture = Util.Cast<Texture>(ConvertUnityAsset(src.sprite));
                         rescale2d = src.sprite.pixelsPerUnit;
+                        dst.flipH = src.flipX;
+                        dst.flipV = src.flipY;
                     }
                 }
                 else if(cmp is Rigidbody2D)
@@ -248,21 +251,21 @@ namespace Godot
 
                 node2d.position = go.transform.localPosition * rescale2d;
                 node2d.position.y *= -1f;
-                // TODO Invert Y properly
-                // TODO Select pivot
-                //node2d.position.y = Screen.height - node2d.position.y;
+
 
                 node2d.scale = go.transform.localScale;
                 SpriteRenderer goSprite = go.GetComponent<SpriteRenderer>();
                 if(goSprite)
                 {
-                    if(goSprite.flipX) node2d.scale.x *= -1f;
-                    if(goSprite.flipY) node2d.scale.y *= -1f;
+                    // if(goSprite.flipX) node2d.scale.x *= -1f;
+                    // if(goSprite.flipY) node2d.scale.y *= -1f;
+                    node2d.zIndex = goSprite.sortingOrder;
                 }
 
                 node2d.rotation = -go.transform.localRotation.eulerAngles.z * Mathf.Deg2Rad;
 
                 node2d.visible = go.activeSelf;
+
 
                 rootNode = node2d;
             }
@@ -316,6 +319,8 @@ namespace Godot
 
             return rootNode;
         }
+
+
 
         NodeCategory DetectCategory(Component[] components)
         {
@@ -440,7 +445,8 @@ namespace Godot
             var at = new AtlasTexture();
             at.resourcePath = relPath;
             at.atlas = atlas;
-            at.region = sprite.textureRect;
+            // at.region = sprite.textureRect;
+            at.region = new Rect(0, 0, sprite.texture.width, sprite.texture.height);
 
             // Invert Y
             at.region.y = sprite.texture.height - at.region.y - at.region.height;
