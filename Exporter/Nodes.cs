@@ -36,6 +36,25 @@ namespace Godot
         }
     }
 
+
+
+    class CanvasLayer : Node
+    {
+        public int layer = 0;
+        public bool fwEnabled = true;
+        public float fwScale = 1.0f;
+        public override Dictionary<string, object> GetData()
+        {
+            var d = base.GetData();
+            d.Add("layer", layer);
+            d.Add("follow_viewport_enabled", fwEnabled);
+            d.Add("follow_viewport_scale", fwScale);
+            return d;
+        }
+
+    }
+
+
     class CanvasItem : Node
     {
         public Color selfModulate = Color.white;
@@ -55,6 +74,8 @@ namespace Godot
             return d;
         }
     }
+
+
 
     class Node2D : CanvasItem
     {
