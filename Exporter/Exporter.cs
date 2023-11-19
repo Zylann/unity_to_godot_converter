@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -105,7 +106,7 @@ namespace Godot
                 var node = ExtractNodeBranch(go);
                 if(node != null)
                 {
-                    node.name = go.name;
+                    // node.name = go.name;
                     tree.AddChild(node);
                 }
             }
@@ -123,7 +124,7 @@ namespace Godot
             Control
         }
 
-        Node ExtractNodeBranch(GameObject go)
+        Node ExtractNodeBranch(GameObject go, bool evaluateCanvasLayer = true)
         {
             // TODO Detect if go is a prefab with PrefabUtility
 
@@ -207,6 +208,31 @@ namespace Godot
                 }
                 else
                 {
+                    /*
+                    Creates a canvas layer as a parent node for the layer,
+                    to create a fake 3d effect in Godot.
+                    Each layer must be contained by an empty object
+                    named LayerX, where X is the layer number
+                    (ex. Layer0, Layer-1, Layer+2, Layer3).
+                    If X is not a number the layer number is 0.
+                    The z position of the empty object LayerX is used to determine
+                    the parallax effect (follow_viewport_scale()) for all the layer's children.
+                    The scale of LayerX must be (1,1,1) to
+                    obtain an equal parallax effect.
+                    */
+                    if(go.name.Contains("Layer") && evaluateCanvasLayer)
+                    {
+                        var canvasLayer = new CanvasLayer()
+                        {
+                            name = "Canvas" + go.name,
+                            layer = int.TryParse(go.name.TrimStart("Layer".ToCharArray()), out int nbr)? nbr:0,
+                            fwScale = 1f + -0.025f*go.transform.position.z
+                        };
+                        rootNode = canvasLayer;
+                        Node childNode = ExtractNodeBranch(go, false);
+                        rootNode.AddChild(childNode);
+                        return rootNode;
+                    }
                     // TODO more
                 }
 
