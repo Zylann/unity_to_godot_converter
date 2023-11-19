@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -12,7 +13,7 @@ namespace Godot
         [MenuItem("Godot/Export to Godot 3.1")]
         static void ExportToGodot31()
         {
-            var e = new Exporter("D:/PROJETS/INFO/UNITY/LD32_EatAndCopulate/GodotProject");
+            var e = new Exporter("Godot/GodotProject");
             e.Export();
         }
 
@@ -105,7 +106,7 @@ namespace Godot
                 var node = ExtractNodeBranch(go);
                 if(node != null)
                 {
-                    node.name = go.name;
+                    // node.name = go.name;
                     tree.AddChild(node);
                 }
             }
@@ -123,7 +124,7 @@ namespace Godot
             Control
         }
 
-        Node ExtractNodeBranch(GameObject go)
+        Node ExtractNodeBranch(GameObject go, bool evaluateCanvasLayer = true)
         {
             // TODO Detect if go is a prefab with PrefabUtility
 
@@ -134,10 +135,11 @@ namespace Godot
 
             Node rootNode = null;
             Rigidbody2D promoteRigidBody2D = null;
-            float rescale2d = 1f;
+            float rescale2d = 100f;
             int scriptCount = 0;
             Script script = null;
             Dictionary<string, object> scriptVariables = null;
+
 
             foreach(var cmp in components)
             {
@@ -155,6 +157,8 @@ namespace Godot
                     {
                         dst.texture = Util.Cast<Texture>(ConvertUnityAsset(src.sprite));
                         rescale2d = src.sprite.pixelsPerUnit;
+                        dst.flipH = src.flipX;
+                        dst.flipV = src.flipY;
                     }
                 }
                 else if(cmp is Rigidbody2D)
@@ -204,6 +208,31 @@ namespace Godot
                 }
                 else
                 {
+                    /*
+                    Creates a canvas layer as a parent node for the layer,
+                    to create a fake 3d effect in Godot.
+                    Each layer must be contained by an empty object
+                    named LayerX, where X is the layer number
+                    (ex. Layer0, Layer-1, Layer+2, Layer3).
+                    If X is not a number the layer number is 0.
+                    The z position of the empty object LayerX is used to determine
+                    the parallax effect (follow_viewport_scale()) for all the layer's children.
+                    The scale of LayerX must be (1,1,1) to
+                    obtain an equal parallax effect.
+                    */
+                    if(go.name.Contains("Layer") && evaluateCanvasLayer)
+                    {
+                        var canvasLayer = new CanvasLayer()
+                        {
+                            name = "Canvas" + go.name,
+                            layer = int.TryParse(go.name.TrimStart("Layer".ToCharArray()), out int nbr)? nbr:0,
+                            fwScale = 1f + -0.025f*go.transform.position.z
+                        };
+                        rootNode = canvasLayer;
+                        Node childNode = ExtractNodeBranch(go, false);
+                        rootNode.AddChild(childNode);
+                        return rootNode;
+                    }
                     // TODO more
                 }
 
@@ -246,18 +275,23 @@ namespace Godot
                     }
                 }
 
-                node2d.position = go.transform.position * rescale2d;
+                node2d.position = go.transform.localPosition * rescale2d;
                 node2d.position.y *= -1f;
-                // TODO Invert Y properly
-                // TODO Select pivot
-                //node2d.position.y = Screen.height - node2d.position.y;
+
 
                 node2d.scale = go.transform.localScale;
+                SpriteRenderer goSprite = go.GetComponent<SpriteRenderer>();
+                if(goSprite)
+                {
+                    // if(goSprite.flipX) node2d.scale.x *= -1f;
+                    // if(goSprite.flipY) node2d.scale.y *= -1f;
+                    node2d.zIndex = goSprite.sortingOrder;
+                }
 
-                // TODO Is eulerAngles in degrees or radians??
-                node2d.rotation = go.transform.rotation.eulerAngles.z;
+                node2d.rotation = -go.transform.localRotation.eulerAngles.z * Mathf.Deg2Rad;
 
                 node2d.visible = go.activeSelf;
+
 
                 rootNode = node2d;
             }
@@ -311,6 +345,8 @@ namespace Godot
 
             return rootNode;
         }
+
+
 
         NodeCategory DetectCategory(Component[] components)
         {
@@ -435,7 +471,8 @@ namespace Godot
             var at = new AtlasTexture();
             at.resourcePath = relPath;
             at.atlas = atlas;
-            at.region = sprite.textureRect;
+            // at.region = sprite.textureRect;
+            at.region = new Rect(0, 0, sprite.texture.width, sprite.texture.height);
 
             // Invert Y
             at.region.y = sprite.texture.height - at.region.y - at.region.height;
